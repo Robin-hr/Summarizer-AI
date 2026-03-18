@@ -993,7 +993,7 @@ let isLoading = false;
 
 // OpenRouter API
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const API_KEY = "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";
+const API_KEY = "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";
 
 // ── Init ───────────────────────────────────────────────────────────────────
 window.onload = () => {
@@ -1104,8 +1104,8 @@ async function summarizeText() {
         'Authorization': `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
-        max_tokens: 1000,
+        model: 'stepfun/step-3.5-flash:free',
+        max_tokens: 2000,
         messages: [{ role: 'user', content: buildPrompt(text) }]
       })
     });
@@ -1113,7 +1113,19 @@ async function summarizeText() {
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
-    const fullResponse = data.choices[0].message.content;
+
+    // stepfun model returns content in reasoning_details when content is null
+    let fullResponse = '';
+    const choice = data.choices[0];
+    if (choice.message.content) {
+      fullResponse = choice.message.content;
+    } else if (choice.message.reasoning_details && choice.message.reasoning_details.length > 0) {
+      fullResponse = choice.message.reasoning_details.map(r => r.text).join('');
+    } else if (choice.message.reasoning) {
+      fullResponse = choice.message.reasoning;
+    } else {
+      throw new Error('No content in response');
+    }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
