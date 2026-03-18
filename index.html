@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SummarAI — Intelligent Text Summarizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080C14;
+    --surface: #0E1520;
+    --surface2: #141C2E;
+    --border: #1E2D4A;
+    --border2: #263552;
+    --accent: #3B82F6;
+    --accent2: #60A5FA;
+    --accent3: #93C5FD;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red: #EF4444;
+    --purple: #8B5CF6;
+    --text: #E2E8F0;
+    --text2: #94A3B8;
+    --text3: #475569;
+    --glow: rgba(59,130,246,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width: 500px; height: 500px; background: rgba(59,130,246,0.07); top: -100px; right: -100px; }
+  .orb2 { width: 400px; height: 400px; background: rgba(139,92,246,0.05); bottom: 100px; left: -100px; }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,12,20,0.8);
+    backdrop-filter: blur(20px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent2); }
+
+  .header-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    border: 1px solid;
+  }
+
+  .badge-blue { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: var(--accent2); }
+  .badge-green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #34D399; }
+
+  /* Main layout */
+  .main {
+    position: relative;
+    z-index: 5;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 40px 60px;
+  }
+
+  /* Hero section */
+  .hero {
+    text-align: center;
+    padding: 40px 0 50px;
+    animation: fadeInUp 0.6s ease both;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--accent3);
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* App container */
+  .app-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+    animation: fadeInUp 0.6s ease 0.1s both;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .panel:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .dot-blue { background: var(--accent); }
+  .dot-green { background: var(--green); }
+
+  .char-count {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 400;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 320px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  textarea::placeholder { color: var(--text3); }
+
+  /* Output panel */
+  .output-content {
+    min-height: 320px;
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text2);
+    font-weight: 300;
+  }
+
+  .output-placeholder {
+    height: 100%;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text3);
+  }
+
+  .output-placeholder-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .output-placeholder p {
+    font-size: 13px;
+    text-align: center;
+    max-width: 200px;
+    line-height: 1.6;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+    animation: fadeInUp 0.6s ease 0.2s both;
+  }
+
+  /* Options panel */
+  .options-panel {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .option-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .option-buttons {
+    display: flex;
+    gap: 6px;
+  }
+
+  .opt-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .opt-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+  .opt-btn.active { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent2); }
+
+  /* Tone select */
+  .tone-select {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s;
+  }
+
+  .tone-select:hover { border-color: var(--border2); }
+  .tone-select:focus { border-color: var(--accent); }
+  .tone-select option { background: var(--surface2); }
+
+  /* Submit button */
+  .btn-summarize {
+    padding: 0 32px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), #2563EB);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(59,130,246,0.3);
+    letter-spacing: 0.3px;
+  }
+
+  .btn-summarize:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(59,130,246,0.4);
+    background: linear-gradient(135deg, #60A5FA, var(--accent));
+  }
+
+  .btn-summarize:active { transform: translateY(0); }
+  .btn-summarize:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-icon { font-size: 16px; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+    animation: fadeInUp 0.6s ease 0.3s both;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .si-blue { background: rgba(59,130,246,0.12); }
+  .si-green { background: rgba(16,185,129,0.12); }
+  .si-amber { background: rgba(245,158,11,0.12); }
+  .si-purple { background: rgba(139,92,246,0.12); }
+
+  .stat-info { flex: 1; min-width: 0; }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* Loading */
+  .loading-container {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    gap: 16px;
+  }
+
+  .loader {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .loading-text {
+    font-size: 13px;
+    color: var(--text2);
+    font-weight: 300;
+  }
+
+  .loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 200px;
+  }
+
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text3);
+    opacity: 0;
+    animation: fadeInLeft 0.4s ease forwards;
+  }
+
+  .loading-step.done { color: var(--green); }
+
+  .loading-step-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* Summary result */
+  .summary-result {
+    display: none;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .summary-text {
+    font-size: 14px;
+    line-height: 1.9;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .summary-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .action-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+  }
+
+  .action-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(59,130,246,0.05); }
+  .action-btn.copied { border-color: var(--green); color: #34D399; background: rgba(16,185,129,0.05); }
+
+  /* Key points section */
+  .key-points {
+    display: none;
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    animation: fadeInUp 0.4s ease 0.1s both;
+  }
+
+  .key-points-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .key-points-list {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .key-point-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text2);
+    font-weight: 300;
+    animation: fadeInLeft 0.3s ease both;
+  }
+
+  .key-point-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(59,130,246,0.15);
+    color: var(--accent2);
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* History section */
+  .history-section {
+    margin-top: 24px;
+    animation: fadeInUp 0.6s ease 0.4s both;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .clear-btn {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .clear-btn:hover { border-color: var(--red); color: #FCA5A5; background: rgba(239,68,68,0.05); }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .history-item:hover { border-color: var(--border2); background: var(--surface2); }
+
+  .history-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    flex-shrink: 0;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .history-content { flex: 1; min-width: 0; }
+
+  .history-input {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    font-weight: 400;
+  }
+
+  .history-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .history-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .ht-blue { background: rgba(59,130,246,0.1); color: var(--accent2); }
+  .ht-green { background: rgba(16,185,129,0.1); color: #34D399; }
+
+  .history-time {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  .history-empty {
+    text-align: center;
+    padding: 30px;
+    color: var(--text3);
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+
+  /* Error state */
+  .error-msg {
+    display: none;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #FCA5A5;
+    font-size: 13px;
+    margin-top: 12px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeInLeft {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .app-container { grid-template-columns: 1fr; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .controls { flex-direction: column; }
+    header { padding: 16px 20px; }
+    .main { padding: 24px 20px 40px; }
+    .header-badges { display: none; }
+    h1 { font-size: 32px; letter-spacing: -1px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">✦</div>
+    <div class="logo-text">Summar<span>AI</span></div>
+  </div>
+  <div class="header-badges">
+    <div class="badge badge-green">● Live</div>
+    <div class="badge badge-blue">AI Powered</div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-tag">Intelligent Summarization Engine</div>
+    <h1>Summarize Any Text<br>Instantly with AI</h1>
+    <p>Paste any article, document, or passage. Our AI distills it into a clear, concise summary in seconds.</p>
+  </div>
+
+  <!-- Input / Output panels -->
+  <div class="app-container">
+    <!-- Input -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot dot-blue"></div>
+          Input Text
+        </div>
+        <span class="char-count" id="charCount">0 characters</span>
+      </div>
+      <textarea
+        id="inputText"
+        placeholder="Paste your text here — an article, report, document, email, or any passage you want summarized..."
+        oninput="updateCharCount()"
+      ></textarea>
+    </div>
+
+    <!-- Output -->
+    <div class="panel" id="outputPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <div class="panel-title-dot dot-green"></div>
+          AI Summary
+        </div>
+        <span class="char-count" id="outputMeta">—</span>
+      </div>
+      <div class="output-content" id="outputContent">
+
+        <!-- Placeholder -->
+        <div class="output-placeholder" id="outputPlaceholder">
+          <div class="output-placeholder-icon">✦</div>
+          <p>Your AI-generated summary will appear here</p>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading-container" id="loadingContainer">
+          <div class="loader"></div>
+          <div class="loading-steps" id="loadingSteps">
+            <div class="loading-step" id="step1" style="animation-delay:0s">
+              <div class="loading-step-dot"></div>
+              Analyzing text structure...
+            </div>
+            <div class="loading-step" id="step2" style="animation-delay:0.5s">
+              <div class="loading-step-dot"></div>
+              Extracting key information...
+            </div>
+            <div class="loading-step" id="step3" style="animation-delay:1s">
+              <div class="loading-step-dot"></div>
+              Generating summary...
+            </div>
+            <div class="loading-step" id="step4" style="animation-delay:1.5s">
+              <div class="loading-step-dot"></div>
+              Finalizing output...
+            </div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div class="summary-result" id="summaryResult">
+          <div class="summary-text" id="summaryText"></div>
+          <div class="summary-actions">
+            <button class="action-btn" id="copyBtn" onclick="copySummary()">📋 Copy</button>
+            <button class="action-btn" onclick="downloadSummary()">⬇ Download</button>
+            <button class="action-btn" onclick="clearAll()">↺ Reset</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Error message -->
+  <div class="error-msg" id="errorMsg">
+    <span>⚠</span>
+    <span id="errorText">Something went wrong. Please try again.</span>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="options-panel">
+      <!-- Length -->
+      <div class="option-group">
+        <div class="option-label">Summary Length</div>
+        <div class="option-buttons">
+          <button class="opt-btn" onclick="setLength('short', this)">Short</button>
+          <button class="opt-btn active" onclick="setLength('medium', this)">Medium</button>
+          <button class="opt-btn" onclick="setLength('long', this)">Long</button>
+        </div>
+      </div>
+      <!-- Format -->
+      <div class="option-group">
+        <div class="option-label">Format</div>
+        <div class="option-buttons">
+          <button class="opt-btn active" onclick="setFormat('paragraph', this)">Paragraph</button>
+          <button class="opt-btn" onclick="setFormat('bullets', this)">Bullets</button>
+        </div>
+      </div>
+      <!-- Tone -->
+      <div class="option-group">
+        <div class="option-label">Tone</div>
+        <select class="tone-select" id="toneSelect">
+          <option value="neutral">Neutral</option>
+          <option value="professional">Professional</option>
+          <option value="simple">Simple / Easy</option>
+          <option value="academic">Academic</option>
+          <option value="creative">Creative</option>
+        </select>
+      </div>
+      <!-- Language -->
+      <div class="option-group">
+        <div class="option-label">Language</div>
+        <select class="tone-select" id="langSelect">
+          <option value="english">English</option>
+          <option value="tamil">Tamil</option>
+          <option value="hindi">Hindi</option>
+          <option value="spanish">Spanish</option>
+          <option value="french">French</option>
+          <option value="arabic">Arabic</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-summarize" id="summarizeBtn" onclick="summarizeText()">
+      <span class="btn-icon">✦</span>
+      Summarize
+    </button>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon si-blue">📝</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statWords">0</div>
+        <div class="stat-label">Input Words</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-green">✦</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statSumWords">—</div>
+        <div class="stat-label">Summary Words</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-amber">📉</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statReduction">—</div>
+        <div class="stat-label">Reduction</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-purple">⏱</div>
+      <div class="stat-info">
+        <div class="stat-value" id="statTime">—</div>
+        <div class="stat-label">Read Time Saved</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Points -->
+  <div class="key-points" id="keyPoints">
+    <div class="key-points-header">★ Key Points Extracted</div>
+    <div class="key-points-list" id="keyPointsList"></div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="section-header">
+      <div class="section-title">
+        🕒 Recent Summaries
+        <span style="background:rgba(59,130,246,0.1);color:var(--accent2);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600" id="historyCount">0</span>
+      </div>
+      <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">No summaries yet. Summarize something to get started!</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let summaryLength = 'medium';
+let summaryFormat = 'paragraph';
+let history = JSON.parse(localStorage.getItem('summarai_history') || '[]');
+let isLoading = false;
+
+// Anthropic API call
+const API_URL = "https://api.anthropic.com/v1/messages";
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.onload = () => {
+  renderHistory();
+  updateStats();
+};
+
+// ── Options ────────────────────────────────────────────────────────────────
+function setLength(val, btn) {
+  summaryLength = val;
+  btn.closest('.option-buttons').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setFormat(val, btn) {
+  summaryFormat = val;
+  btn.closest('.option-buttons').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Char Count ─────────────────────────────────────────────────────────────
+function updateCharCount() {
+  const text = document.getElementById('inputText').value;
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  document.getElementById('charCount').textContent = `${chars.toLocaleString()} chars`;
+  document.getElementById('statWords').textContent = words.toLocaleString();
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statWords').textContent =
+    document.getElementById('inputText').value.trim()
+      ? document.getElementById('inputText').value.trim().split(/\s+/).length.toLocaleString()
+      : '0';
+}
+
+// ── Build prompt ────────────────────────────────────────────────────────────
+function buildPrompt(text) {
+  const tone = document.getElementById('toneSelect').value;
+  const lang = document.getElementById('langSelect').value;
+
+  const lengthMap = {
+    short:  'very concise — 2 to 3 sentences only',
+    medium: 'moderate — around 5 to 7 sentences',
+    long:   'comprehensive — around 10 to 12 sentences covering all important aspects'
+  };
+
+  const formatInstruction = summaryFormat === 'bullets'
+    ? 'Format the summary as clear bullet points, each starting with a dash (-).'
+    : 'Format the summary as flowing prose paragraphs.';
+
+  const toneMap = {
+    neutral:      'neutral and factual',
+    professional: 'professional and formal',
+    simple:       'simple, clear, and easy to understand for a general audience',
+    academic:     'academic and scholarly',
+    creative:     'engaging and creative'
+  };
+
+  const langInstruction = lang !== 'english'
+    ? `Write the summary in ${lang.charAt(0).toUpperCase() + lang.slice(1)}.`
+    : 'Write the summary in English.';
+
+  return `You are an expert text summarizer. Your task is to summarize the following text.
+
+Instructions:
+- Length: ${lengthMap[summaryLength]}
+- Tone: ${toneMap[tone]}
+- ${formatInstruction}
+- ${langInstruction}
+- After the summary, on a new line write "KEY_POINTS:" followed by exactly 4 key points from the text, each on a new line starting with a number and period (e.g. "1. Point here")
+- Do not include any other commentary or preamble — only the summary and key points.
+
+Text to summarize:
+"""
+${text}
+"""`;
+}
+
+// ── Main summarize function ─────────────────────────────────────────────────
+async function summarizeText() {
+  const text = document.getElementById('inputText').value.trim();
+
+  if (!text) {
+    showError('Please enter some text to summarize.');
+    return;
+  }
+
+  if (text.split(/\s+/).length < 20) {
+    showError('Please enter at least 20 words for a meaningful summary.');
+    return;
+  }
+
+  if (isLoading) return;
+
+  isLoading = true;
+  hideError();
+  showLoading();
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: buildPrompt(text) }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const data = await response.json();
+    const fullResponse = data.content[0].text;
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    // Parse summary and key points
+    const keyPointsIndex = fullResponse.indexOf('KEY_POINTS:');
+    let summaryText = fullResponse;
+    let keyPoints = [];
+
+    if (keyPointsIndex !== -1) {
+      summaryText = fullResponse.substring(0, keyPointsIndex).trim();
+      const kpSection = fullResponse.substring(keyPointsIndex + 11).trim();
+      keyPoints = kpSection.split('\n').filter(l => l.trim() && /^\d+\./.test(l.trim())).map(l => l.replace(/^\d+\.\s*/, '').trim());
+    }
+
+    showResult(text, summaryText, keyPoints, elapsed);
+
+  } catch (err) {
+    hideLoading();
+    showError('Failed to connect to AI. Please check your connection and try again.');
+    console.error(err);
+  }
+
+  isLoading = false;
+}
+
+// ── Show / Hide states ──────────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('outputPlaceholder').style.display = 'none';
+  document.getElementById('summaryResult').style.display = 'none';
+  document.getElementById('loadingContainer').style.display = 'flex';
+  document.getElementById('keyPoints').style.display = 'none';
+  document.getElementById('summarizeBtn').disabled = true;
+  document.getElementById('outputMeta').textContent = 'Thinking...';
+
+  // Animate loading steps
+  ['step1','step2','step3','step4'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.style.opacity = '0';
+    el.classList.remove('done');
+    setTimeout(() => { el.style.opacity = '1'; }, i * 500);
+  });
+}
+
+function hideLoading() {
+  document.getElementById('loadingContainer').style.display = 'none';
+  document.getElementById('summarizeBtn').disabled = false;
+}
+
+function showResult(inputText, summary, keyPoints, time) {
+  hideLoading();
+
+  // Mark steps done
+  ['step1','step2','step3','step4'].forEach(id => document.getElementById(id).classList.add('done'));
+
+  const inputWords = inputText.trim().split(/\s+/).length;
+  const summaryWords = summary.trim().split(/\s+/).length;
+  const reduction = Math.round((1 - summaryWords / inputWords) * 100);
+  const timeSaved = Math.round(inputWords / 200); // avg reading speed
+
+  // Show result
+  document.getElementById('summaryText').textContent = summary;
+  document.getElementById('summaryResult').style.display = 'block';
+
+  // Stats
+  document.getElementById('statSumWords').textContent = summaryWords.toLocaleString();
+  document.getElementById('statReduction').textContent = reduction > 0 ? `${reduction}%` : 'N/A';
+  document.getElementById('statTime').textContent = timeSaved > 0 ? `~${timeSaved} min` : '<1 min';
+  document.getElementById('outputMeta').textContent = `${summaryWords} words · ${time}s`;
+
+  // Key points
+  if (keyPoints.length > 0) {
+    const list = document.getElementById('keyPointsList');
+    list.innerHTML = '';
+    keyPoints.forEach((point, i) => {
+      const item = document.createElement('div');
+      item.className = 'key-point-item';
+      item.style.animationDelay = `${i * 0.08}s`;
+      item.innerHTML = `<div class="key-point-num">${i + 1}</div><div>${point}</div>`;
+      list.appendChild(item);
+    });
+    document.getElementById('keyPoints').style.display = 'block';
+  }
+
+  // Add to history
+  addToHistory(inputText, summary, summaryLength, summaryFormat);
+}
+
+// ── Copy / Download ─────────────────────────────────────────────────────────
+function copySummary() {
+  const text = document.getElementById('summaryText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function downloadSummary() {
+  const summary = document.getElementById('summaryText').textContent;
+  const input = document.getElementById('inputText').value.trim();
+  const content = `SummarAI — Text Summary\n${'='.repeat(40)}\n\nOriginal Text:\n${input}\n\n${'='.repeat(40)}\n\nAI Summary:\n${summary}\n\nGenerated by SummarAI`;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'summarai-summary.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('outputPlaceholder').style.display = 'flex';
+  document.getElementById('summaryResult').style.display = 'none';
+  document.getElementById('keyPoints').style.display = 'none';
+  document.getElementById('charCount').textContent = '0 characters';
+  document.getElementById('outputMeta').textContent = '—';
+  document.getElementById('statWords').textContent = '0';
+  document.getElementById('statSumWords').textContent = '—';
+  document.getElementById('statReduction').textContent = '—';
+  document.getElementById('statTime').textContent = '—';
+  hideError();
+}
+
+// ── Error ───────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  document.getElementById('errorText').textContent = msg;
+  el.style.display = 'flex';
+}
+
+function hideError() {
+  document.getElementById('errorMsg').style.display = 'none';
+}
+
+// ── History ─────────────────────────────────────────────────────────────────
+function addToHistory(input, summary, length, format) {
+  const item = {
+    id: Date.now(),
+    input: input.substring(0, 120) + (input.length > 120 ? '...' : ''),
+    summary,
+    length,
+    format,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    words: summary.trim().split(/\s+/).length
+  };
+  history.unshift(item);
+  if (history.length > 8) history = history.slice(0, 8);
+  localStorage.setItem('summarai_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  document.getElementById('historyCount').textContent = history.length;
+
+  if (history.length === 0) {
+    list.innerHTML = '<div class="history-empty">No summaries yet. Summarize something to get started!</div>';
+    return;
+  }
+
+  list.innerHTML = history.map((item, i) => `
+    <div class="history-item" onclick="loadHistory(${item.id})">
+      <div class="history-num">${i + 1}</div>
+      <div class="history-content">
+        <div class="history-input">${item.input}</div>
+        <div class="history-meta">
+          <span class="history-tag ht-blue">${item.length}</span>
+          <span class="history-tag ht-green">${item.words} words</span>
+          <span class="history-time">${item.time}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadHistory(id) {
+  const item = history.find(h => h.id === id);
+  if (!item) return;
+  document.getElementById('summaryText').textContent = item.summary;
+  document.getElementById('outputPlaceholder').style.display = 'none';
+  document.getElementById('summaryResult').style.display = 'block';
+
+  const words = item.summary.trim().split(/\s+/).length;
+  document.getElementById('statSumWords').textContent = words.toLocaleString();
+  document.getElementById('outputMeta').textContent = `${words} words (history)`;
+}
+
+function clearHistory() {
+  history = [];
+  localStorage.removeItem('summarai_history');
+  renderHistory();
+}
+
+// ── Keyboard shortcut ────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    summarizeText();
+  }
+});
+</script>
+
+</body>
+</html>
