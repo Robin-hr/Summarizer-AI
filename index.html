@@ -991,8 +991,9 @@ let summaryFormat = 'paragraph';
 let history = JSON.parse(localStorage.getItem('summarai_history') || '[]');
 let isLoading = false;
 
-// Anthropic API call
-const API_URL = "https://api.anthropic.com/v1/messages";
+// OpenRouter API
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const API_KEY = "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";
 
 // ── Init ───────────────────────────────────────────────────────────────────
 window.onload = () => {
@@ -1098,9 +1099,12 @@ async function summarizeText() {
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'meta-llama/llama-3.1-8b-instruct:free',
         max_tokens: 1000,
         messages: [{ role: 'user', content: buildPrompt(text) }]
       })
@@ -1109,7 +1113,7 @@ async function summarizeText() {
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
-    const fullResponse = data.content[0].text;
+    const fullResponse = data.choices[0].message.content;
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
