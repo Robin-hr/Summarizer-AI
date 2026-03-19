@@ -103,7 +103,7 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=${{ secrets.SONAR_ORG }}_summarizer-ai
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.projectName=Summarizer-AI
             -Dsonar.organization=${{ secrets.SONAR_ORG }}
             -Dsonar.sources=.
@@ -120,7 +120,7 @@ jobs:
         if: always()
         run: |
           echo "SonarCloud Analysis Complete"
-          echo "View: https://sonarcloud.io/dashboard?id=${{ secrets.SONAR_ORG }}_summarizer-ai"
+          echo "View: https://sonarcloud.io/dashboard?id=${{ secrets.SONAR_PROJECT_KEY }}"
 
   # ══════════════════════════════════════════════════════
   # JOB 4: OWASP ZAP SECURITY SCAN
