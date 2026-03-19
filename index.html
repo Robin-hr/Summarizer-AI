@@ -489,6 +489,11 @@
     animation: fadeInLeft 0.4s ease forwards;
   }
 
+  #step1 { animation-delay: 0s; }
+  #step2 { animation-delay: 0.5s; }
+  #step3 { animation-delay: 1s; }
+  #step4 { animation-delay: 1.5s; }
+
   .loading-step.done { color: var(--green); }
 
   .loading-step-dot {
@@ -625,6 +630,15 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .history-count-badge {
+    background: rgba(59,130,246,0.1);
+    color: var(--accent2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
   }
 
   .clear-btn {
@@ -841,19 +855,19 @@
         <div class="loading-container" id="loadingContainer">
           <div class="loader"></div>
           <div class="loading-steps" id="loadingSteps">
-            <div class="loading-step" id="step1" style="animation-delay:0s">
+            <div class="loading-step" id="step1">
               <div class="loading-step-dot"></div>
               Analyzing text structure...
             </div>
-            <div class="loading-step" id="step2" style="animation-delay:0.5s">
+            <div class="loading-step" id="step2">
               <div class="loading-step-dot"></div>
               Extracting key information...
             </div>
-            <div class="loading-step" id="step3" style="animation-delay:1s">
+            <div class="loading-step" id="step3">
               <div class="loading-step-dot"></div>
               Generating summary...
             </div>
-            <div class="loading-step" id="step4" style="animation-delay:1.5s">
+            <div class="loading-step" id="step4">
               <div class="loading-step-dot"></div>
               Finalizing output...
             </div>
@@ -864,9 +878,9 @@
         <div class="summary-result" id="summaryResult">
           <div class="summary-text" id="summaryText"></div>
           <div class="summary-actions">
-            <button class="action-btn" id="copyBtn" onclick="copySummary()">📋 Copy</button>
-            <button class="action-btn" onclick="downloadSummary()">⬇ Download</button>
-            <button class="action-btn" onclick="clearAll()">↺ Reset</button>
+            <button type="button" class="action-btn" id="copyBtn" onclick="copySummary()">📋 Copy</button>
+            <button type="button" class="action-btn" onclick="downloadSummary()">⬇ Download</button>
+            <button type="button" class="action-btn" onclick="clearAll()">↺ Reset</button>
           </div>
         </div>
 
@@ -887,17 +901,17 @@
       <div class="option-group">
         <div class="option-label">Summary Length</div>
         <div class="option-buttons">
-          <button class="opt-btn" onclick="setLength('short', this)">Short</button>
-          <button class="opt-btn active" onclick="setLength('medium', this)">Medium</button>
-          <button class="opt-btn" onclick="setLength('long', this)">Long</button>
+          <button type="button" class="opt-btn" onclick="setLength('short', this)">Short</button>
+          <button type="button" class="opt-btn active" onclick="setLength('medium', this)">Medium</button>
+          <button type="button" class="opt-btn" onclick="setLength('long', this)">Long</button>
         </div>
       </div>
       <!-- Format -->
       <div class="option-group">
         <div class="option-label">Format</div>
         <div class="option-buttons">
-          <button class="opt-btn active" onclick="setFormat('paragraph', this)">Paragraph</button>
-          <button class="opt-btn" onclick="setFormat('bullets', this)">Bullets</button>
+          <button type="button" class="opt-btn active" onclick="setFormat('paragraph', this)">Paragraph</button>
+          <button type="button" class="opt-btn" onclick="setFormat('bullets', this)">Bullets</button>
         </div>
       </div>
       <!-- Tone -->
@@ -924,7 +938,7 @@
         </select>
       </div>
     </div>
-    <button class="btn-summarize" id="summarizeBtn" onclick="summarizeText()">
+    <button type="button" class="btn-summarize" id="summarizeBtn" onclick="summarizeText()">
       <span class="btn-icon">✦</span>
       Summarize
     </button>
@@ -973,9 +987,9 @@
     <div class="section-header">
       <div class="section-title">
         🕒 Recent Summaries
-        <span style="background:rgba(59,130,246,0.1);color:var(--accent2);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600" id="historyCount">0</span>
+        <span class="history-count-badge" id="historyCount">0</span>
       </div>
-      <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+      <button type="button" class="clear-btn" onclick="clearHistory()">Clear All</button>
     </div>
     <div class="history-list" id="historyList">
       <div class="history-empty">No summaries yet. Summarize something to get started!</div>
