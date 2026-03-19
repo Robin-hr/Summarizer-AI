@@ -117,38 +117,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── DEBUG: Validate SSH key format and EC2 connectivity ──
-      - name: Debug — Validate SSH setup
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  🔑 SSH Key Diagnostics"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          # Write key to file
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          # Check key starts and ends correctly
-          echo "▶ First line of key:"
-          head -1 ~/.ssh/id_rsa
-
-          echo "▶ Last line of key:"
-          tail -1 ~/.ssh/id_rsa
-
-          echo "▶ Total lines in key:"
-          wc -l < ~/.ssh/id_rsa
-
-          echo "▶ Key type detected:"
-          ssh-keygen -l -f ~/.ssh/id_rsa 2>&1 || echo "❌ ssh-keygen could not read key — format issue!"
-
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+
+          # Write key — handle Windows CRLF line endings
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" \
+            | sed 's/\r//' \
+            | sed 's/\\n/\n/g' \
+            > ~/.ssh/id_rsa
+
           chmod 600 ~/.ssh/id_rsa
+
+          # Verify key is readable
+          echo "▶ Key fingerprint:"
+          ssh-keygen -l -f ~/.ssh/id_rsa
+
+          # Add EC2 host to known hosts
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy HTML file to EC2
@@ -156,7 +141,7 @@ jobs:
           echo "🚀 Deploying Summarizer-AI to EC2..."
           scp -i ~/.ssh/id_rsa \
             -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
+            -o ConnectTimeout=15 \
             index.html \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_DEPLOY_PATH }}
           echo "✅ Deployment complete!"
