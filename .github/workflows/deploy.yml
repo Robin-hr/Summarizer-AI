@@ -11,7 +11,7 @@ on:
 jobs:
 
   # ══════════════════════════════════════════════════════
-  # JOB 1: HTML VALIDATION  (Shift-Left Quality Gate)
+  # JOB 1: HTML VALIDATION
   # ══════════════════════════════════════════════════════
   validate:
     name: "🔍 HTML Validation"
@@ -36,18 +36,17 @@ jobs:
           echo "✅ HTML validation passed!"
 
   # ══════════════════════════════════════════════════════
-  # JOB 2: OWASP ZAP SECURITY SCAN  (DevSecOps Gate)
+  # JOB 2: OWASP ZAP SECURITY SCAN
   # ══════════════════════════════════════════════════════
   security-scan:
     name: "🛡️ OWASP ZAP Security Scan"
     runs-on: ubuntu-latest
-    needs: validate              # Run only after HTML validation passes
+    needs: validate
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ── Spin up a local web server to serve the HTML file ──
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -60,29 +59,37 @@ jobs:
           sleep 3
           echo "✅ Local server running at http://localhost:8090"
 
-      # ── Run OWASP ZAP Baseline Scan ──
+      # ── FIX: Grant write permissions so ZAP Docker can write zap.yaml ──
+      - name: Fix workspace permissions for ZAP
+        run: chmod -R 777 ${{ github.workspace }}
+
+      # ── Pre-create report files with open permissions ──
+      - name: Pre-create ZAP report files
+        run: |
+          touch report_json.json report_md.md report_html.html
+          chmod 666 report_json.json report_md.md report_html.html
+
       - name: Run OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'http://localhost:8090/index.html'
-          rules_file_name: '.zap/rules.tsv'          # optional ignore rules
-          cmd_options: '-a'                           # include alpha-passive rules
-          allow_issue_writing: false                  # don't auto-create GitHub issues
-          fail_action: false                          # warn but don't fail pipeline (set true to enforce hard block)
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+          allow_issue_writing: false
+          fail_action: false
 
-      # ── Upload ZAP Report as Artifact ──
+      # ── FIX: Use hyphen in artifact name (no underscores) ──
       - name: Upload ZAP Scan Report
         uses: actions/upload-artifact@v4
-        if: always()                                  # upload even if scan finds issues
+        if: always()
         with:
-          name: zap-security-report
+          name: zap-security-report        # ← hyphen, not underscore
           path: |
             report_html.html
             report_json.json
             report_md.md
           retention-days: 14
 
-      # ── Print Summary ──
       - name: Security Scan Summary
         if: always()
         run: |
@@ -94,12 +101,12 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   # ══════════════════════════════════════════════════════
-  # JOB 3: DEPLOY TO EC2  (Only after all gates pass)
+  # JOB 3: DEPLOY TO EC2
   # ══════════════════════════════════════════════════════
   deploy:
     name: "🚀 Deploy to EC2"
     runs-on: ubuntu-latest
-    needs: [validate, security-scan]    # Both jobs must pass before deploying
+    needs: [validate, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -142,5 +149,4 @@ jobs:
 
       - name: Deployment Failure Alert
         if: failure()
-        run: |
-          echo "❌ Deployment FAILED. Check the logs above."
+        run: echo "❌ Deployment FAILED. Check the logs above."
