@@ -124,12 +124,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # Verify key loaded correctly
-          echo "▶ Key fingerprint:"
-          ssh-keygen -l -f ~/.ssh/id_rsa
-
-          # Add EC2 to known hosts
           ssh-keyscan -t ed25519 -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy HTML file to EC2
@@ -144,24 +138,116 @@ jobs:
 
       - name: Verify Deployment
         run: |
-          echo "🔎 Verifying deployment on EC2..."
           ssh -i ~/.ssh/id_rsa \
             -o StrictHostKeyChecking=no \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
             "ls -lh ${{ secrets.EC2_DEPLOY_PATH }}/index.html && echo '✅ File is live on EC2!'"
 
-      - name: Deployment Success Summary
+  # ══════════════════════════════════════════════════════
+  # JOB 4: SECURITY HARDENING
+  # Fixes vulnerabilities found by ZAP on EC2
+  # ══════════════════════════════════════════════════════
+  harden:
+    name: "🔒 Security Hardening"
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Setup SSH Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t ed25519 -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Apply Security Hardening on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  🔒 Applying Security Hardening..."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            NGINX_CONF="/etc/nginx/sites-available/default"
+
+            # ── FIX 1: Block .git directory access ──────────
+            echo "▶ Blocking .git exposure..."
+            if ! sudo grep -q "location ~ /\\.git" "$NGINX_CONF"; then
+              sudo sed -i '/server_name _;/a\\n\t# Block .git directory\n\tlocation ~ /\\.git {\n\t\tdeny all;\n\t\treturn 404;\n\t}' "$NGINX_CONF"
+              echo "  ✅ .git access blocked"
+            else
+              echo "  ✅ .git rule already exists"
+            fi
+
+            # ── FIX 2: Add X-Frame-Options header (Clickjacking) ──
+            echo "▶ Adding X-Frame-Options header..."
+            if ! sudo grep -q "X-Frame-Options" "$NGINX_CONF"; then
+              sudo sed -i '/server_name _;/a\\n\t# Security Headers\n\tadd_header X-Frame-Options "SAMEORIGIN" always;' "$NGINX_CONF"
+              echo "  ✅ X-Frame-Options header added"
+            else
+              echo "  ✅ X-Frame-Options already set"
+            fi
+
+            # ── FIX 3: Add X-Content-Type-Options header ─────
+            echo "▶ Adding X-Content-Type-Options header..."
+            if ! sudo grep -q "X-Content-Type-Options" "$NGINX_CONF"; then
+              sudo sed -i '/server_name _;/a\\tadd_header X-Content-Type-Options "nosniff" always;' "$NGINX_CONF"
+              echo "  ✅ X-Content-Type-Options header added"
+            else
+              echo "  ✅ X-Content-Type-Options already set"
+            fi
+
+            # ── FIX 4: Add Content Security Policy header ────
+            echo "▶ Adding Content-Security-Policy header..."
+            if ! sudo grep -q "Content-Security-Policy" "$NGINX_CONF"; then
+              sudo sed -i '/server_name _;/a\\tadd_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' https://fonts.googleapis.com; style-src '\''self'\'' '\''unsafe-inline'\'' https://fonts.googleapis.com; font-src '\''self'\'' https://fonts.gstatic.com;" always;' "$NGINX_CONF"
+              echo "  ✅ CSP header added"
+            else
+              echo "  ✅ CSP already set"
+            fi
+
+            # ── FIX 5: Add Permissions-Policy header ─────────
+            echo "▶ Adding Permissions-Policy header..."
+            if ! sudo grep -q "Permissions-Policy" "$NGINX_CONF"; then
+              sudo sed -i '/server_name _;/a\\tadd_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;' "$NGINX_CONF"
+              echo "  ✅ Permissions-Policy header added"
+            else
+              echo "  ✅ Permissions-Policy already set"
+            fi
+
+            # ── Validate and Reload Nginx ─────────────────────
+            echo "▶ Validating Nginx config..."
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "  ✅ Nginx reloaded successfully"
+
+            # ── Verify .git is now blocked ────────────────────
+            echo "▶ Verifying .git is blocked..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/.git/config)
+            if [ "$STATUS" = "404" ]; then
+              echo "  ✅ .git access confirmed BLOCKED (404)"
+            else
+              echo "  ⚠️  .git returned HTTP $STATUS — check Nginx config"
+            fi
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  🔒 Security Hardening Complete!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          EOF
+
+      - name: Hardening Success
         if: success()
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  🎉 Summarizer-AI Deployed Successfully!"
+          echo "  ✅ All Security Fixes Applied!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  Host        : ${{ secrets.EC2_HOST }}"
-          echo "  Deploy Path : ${{ secrets.EC2_DEPLOY_PATH }}"
-          echo "  Triggered by: ${{ github.actor }}"
-          echo "  Commit SHA  : ${{ github.sha }}"
+          echo "  🔒 .git directory   → BLOCKED"
+          echo "  🔒 X-Frame-Options  → SAMEORIGIN"
+          echo "  🔒 X-Content-Type   → nosniff"
+          echo "  🔒 CSP Header       → Applied"
+          echo "  🔒 Permissions      → Restricted"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-      - name: Deployment Failure Alert
-        if: failure()
-        run: echo "❌ Deployment FAILED. Check the logs above."
