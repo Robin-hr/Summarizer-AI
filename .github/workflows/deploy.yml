@@ -1,0 +1,146 @@
+name: Summarizer-AI — DevSecOps Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  # ══════════════════════════════════════════════════════
+  # JOB 1: HTML VALIDATION  (Shift-Left Quality Gate)
+  # ══════════════════════════════════════════════════════
+  validate:
+    name: "🔍 HTML Validation"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Run HTML Validation
+        run: |
+          echo "🔍 Validating HTML file..."
+          html-validate index.html
+          echo "✅ HTML validation passed!"
+
+  # ══════════════════════════════════════════════════════
+  # JOB 2: OWASP ZAP SECURITY SCAN  (DevSecOps Gate)
+  # ══════════════════════════════════════════════════════
+  security-scan:
+    name: "🛡️ OWASP ZAP Security Scan"
+    runs-on: ubuntu-latest
+    needs: validate              # Run only after HTML validation passes
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ── Spin up a local web server to serve the HTML file ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start Local HTTP Server
+        run: |
+          npm install -g http-server
+          http-server . -p 8090 &
+          sleep 3
+          echo "✅ Local server running at http://localhost:8090"
+
+      # ── Run OWASP ZAP Baseline Scan ──
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:8090/index.html'
+          rules_file_name: '.zap/rules.tsv'          # optional ignore rules
+          cmd_options: '-a'                           # include alpha-passive rules
+          allow_issue_writing: false                  # don't auto-create GitHub issues
+          fail_action: false                          # warn but don't fail pipeline (set true to enforce hard block)
+
+      # ── Upload ZAP Report as Artifact ──
+      - name: Upload ZAP Scan Report
+        uses: actions/upload-artifact@v4
+        if: always()                                  # upload even if scan finds issues
+        with:
+          name: zap-security-report
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 14
+
+      # ── Print Summary ──
+      - name: Security Scan Summary
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  🛡️  OWASP ZAP Scan Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  📄 Reports saved as pipeline artifacts"
+          echo "  🔗 Check the Actions tab → Artifacts"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # ══════════════════════════════════════════════════════
+  # JOB 3: DEPLOY TO EC2  (Only after all gates pass)
+  # ══════════════════════════════════════════════════════
+  deploy:
+    name: "🚀 Deploy to EC2"
+    runs-on: ubuntu-latest
+    needs: [validate, security-scan]    # Both jobs must pass before deploying
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy HTML file to EC2
+        run: |
+          echo "🚀 Deploying Summarizer-AI to EC2..."
+          scp -i ~/.ssh/id_rsa \
+            index.html \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_DEPLOY_PATH }}
+          echo "✅ Deployment complete!"
+
+      - name: Verify Deployment
+        run: |
+          echo "🔎 Verifying deployment on EC2..."
+          ssh -i ~/.ssh/id_rsa \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "ls -lh ${{ secrets.EC2_DEPLOY_PATH }}/index.html && echo '✅ File is live on EC2!'"
+
+      - name: Deployment Success Summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  🎉 Summarizer-AI Deployed Successfully!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Host        : ${{ secrets.EC2_HOST }}"
+          echo "  Deploy Path : ${{ secrets.EC2_DEPLOY_PATH }}"
+          echo "  Triggered by: ${{ github.actor }}"
+          echo "  Commit SHA  : ${{ github.sha }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Deployment Failure Alert
+        if: failure()
+        run: |
+          echo "❌ Deployment FAILED. Check the logs above."
