@@ -121,19 +121,15 @@ jobs:
         run: |
           mkdir -p ~/.ssh
 
-          # Write key — handle Windows CRLF line endings
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" \
-            | sed 's/\r//' \
-            | sed 's/\\n/\n/g' \
-            > ~/.ssh/id_rsa
-
+          # Decode base64 key → restores exact original key file
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Verify key is readable
+          # Verify key loaded correctly
           echo "▶ Key fingerprint:"
           ssh-keygen -l -f ~/.ssh/id_rsa
 
-          # Add EC2 host to known hosts
+          # Add EC2 to known hosts
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy HTML file to EC2
