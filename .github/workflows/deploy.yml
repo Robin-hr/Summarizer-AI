@@ -118,11 +118,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup SSH Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
-
-          # Decode base64 key → restores exact original key file
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
           # Verify key loaded correctly
@@ -130,7 +130,7 @@ jobs:
           ssh-keygen -l -f ~/.ssh/id_rsa
 
           # Add EC2 to known hosts
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -t ed25519 -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy HTML file to EC2
         run: |
