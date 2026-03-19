@@ -59,16 +59,15 @@ jobs:
           sleep 3
           echo "✅ Local server running at http://localhost:8090"
 
-      # ── FIX: Grant write permissions so ZAP Docker can write zap.yaml ──
       - name: Fix workspace permissions for ZAP
         run: chmod -R 777 ${{ github.workspace }}
 
-      # ── Pre-create report files with open permissions ──
       - name: Pre-create ZAP report files
         run: |
           touch report_json.json report_md.md report_html.html
           chmod 666 report_json.json report_md.md report_html.html
 
+      # ── KEY FIX: artifact_name set to empty string disables ZAP's own upload ──
       - name: Run OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
@@ -77,18 +76,20 @@ jobs:
           cmd_options: '-a'
           allow_issue_writing: false
           fail_action: false
+          artifact_name: ''              # ← disables ZAP's internal artifact upload
 
-      # ── FIX: Use hyphen in artifact name (no underscores) ──
-      - name: Upload ZAP Scan Report
+      # ── We handle the upload ourselves with a valid artifact name ──
+      - name: Upload ZAP Security Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-security-report        # ← hyphen, not underscore
+          name: zap-security-report      # ← valid name, hyphens only
           path: |
             report_html.html
             report_json.json
             report_md.md
           retention-days: 14
+          if-no-files-found: warn
 
       - name: Security Scan Summary
         if: always()
@@ -96,8 +97,8 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "  🛡️  OWASP ZAP Scan Complete"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  📄 Reports saved as pipeline artifacts"
-          echo "  🔗 Check the Actions tab → Artifacts"
+          echo "  📄 Reports uploaded as: zap-security-report"
+          echo "  🔗 Actions tab → your run → Artifacts"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   # ══════════════════════════════════════════════════════
